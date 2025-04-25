@@ -1,0 +1,50 @@
+name: Publish Release to GitHub
+
+on:
+  workflow_run:
+    #this workflow must run after build.yml.
+    workflows: [ "Compile and Test" ]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate version tag
+        id: version
+        run: |
+          VERSION="$(date -u +'%Y.%m.%d.%H%M%S')"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Publish app
+        run: dotnet publish MyWebApp/MyWebApp.csproj --configuration Release --output publish_output
+
+      - name: Zip published output
+        run: |
+          zip -r mywebapp.zip publish_output
+          mv mywebapp.zip mywebapp.${{ steps.version.outputs.version }}.zip
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install gh -y
+          # curl -fsSL https://raw.githubusercontent.com/platformsh/cli/main/installer.sh | sh
+  
+      - name: Create GitHub Release
+        run: |
+          gh release create ${{ steps.version.outputs.version }} mywebapp.${{ steps.version.outputs.version }}.zip \
+          --title "Release ${{ steps.version.outputs.version }} " \
+          --notes "Initial release of MyWebApp ${{ steps.version.outputs.version }}"            
+        env:
+          GITHUB_TOKEN: ${{ secrets.GHUB_TOKEN }}          
+

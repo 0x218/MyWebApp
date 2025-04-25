@@ -1,0 +1,71 @@
+name: Deploy to Octopus
+
+on:
+  workflow_run:
+    #this workflow must run after publish.yml.
+    workflows: [ "Publish Release to GitHub" ]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Find the latest release asset
+        id: get_asset
+        run: |
+          echo "Finding latest release for ${{ github.repository }}"
+          release_info=$(curl -s -H "Authorization: token ${{ secrets.GHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+
+          #echo "$release_info" | jq
+
+          #extract the URL
+          asset_url=$(echo "$release_info" | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url')
+          asset_name=$(echo "$release_info" | jq -r '.assets[] | select(.name | endswith(".zip")) | .name')
+
+          if [[ -z "$asset_url" ]]; then
+            echo "No ZIP asset found in the latest release"
+            exit 1
+          fi
+          
+          echo "asset url: $asset_url"
+          echo "asset name: $asset_name" 
+
+          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$asset_name" >> "$GITHUB_OUTPUT"
+
+
+      - name: Download latest release ZIP
+        env:
+          ASSET_URL: ${{ steps.get_asset.outputs.asset_url }}
+          ASSET_NAME: ${{ steps.get_asset.outputs.asset_name }}
+        run: |
+          echo "Downloading the latest release asset: $ASSET_NAME"
+          
+          echo "asset url: $ASSET_URL"
+          echo "asset name: $ASSET_NAME" 
+
+          curl -L -o "$ASSET_NAME" "$ASSET_URL"
+
+      - name: List files after download
+        run: |
+          echo "Listing files after download..."
+          ls -lh
+
+      - name: Install Octopus CLI
+        run: |
+          curl -L https://download.octopusdeploy.com/octopus-tools/9.0.0/OctopusTools.9.0.0.linux-x64.tar.gz -o octo.tar.gz
+          mkdir octo
+          tar -xvzf octo.tar.gz -C octo
+          sudo cp octo/octo /usr/local/bin
+
+      - name: Push package to Octopus
+        run: |
+          PACKAGE_NAME=$(ls mywebapp*.zip)
+          octo push \
+            --server ${{ secrets.OCTOPUS_SERVER }} \
+            --apiKey ${{ secrets.OCTOPUS_API_KEY }} \
+            --package "$PACKAGE_NAME" \
+            --replace-existing

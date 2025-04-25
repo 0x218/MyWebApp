@@ -1,0 +1,35 @@
+name: Compile and Test
+
+on:
+  # workflow_dispatch:
+  push:
+    #branches: [main, dev, release]
+    #paths: ['**.cs', '.github/workflows/*.yml']
+    branches: [main]
+  pull_request:
+    #branches: [main, dev, release]
+    # paths: ['**.cs', '.github/workflows/*.yml']
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore MyWebApp.sln
+
+    - name: Build solution
+      run: dotnet build MyWebApp.sln --no-restore --configuration Release
+
+    - name: Run tests
+      run: dotnet test MyWebApp.sln --no-build --configuration Release

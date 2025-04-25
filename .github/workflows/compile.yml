@@ -1,14 +1,9 @@
 name: Compile and Test
 
 on:
-  # workflow_dispatch:
   push:
-    #branches: [main, dev, release]
-    #paths: ['**.cs', '.github/workflows/*.yml']
     branches: [main]
   pull_request:
-    #branches: [main, dev, release]
-    # paths: ['**.cs', '.github/workflows/*.yml']
     branches: [main]
 
 jobs:

@@ -2,7 +2,6 @@ name: Deploy to Octopus
 
 on:
   workflow_run:
-    #this workflow must run after publish.yml.
     workflows: [ "Publish Release to GitHub" ]
     types:
       - completed

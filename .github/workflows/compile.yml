@@ -1,12 +1,12 @@
 name: Compile and Test
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispath:
-  
+
 jobs:
   build:
     name: Build and Test
